@@ -53,7 +53,17 @@ def import_from_excel():
         return False
 
     try:
-        df = pd.read_excel(file_path)
+        df = pd.read_excel(
+            file_path,
+            dtype=str,           # ← ĐỌC TẤT CẢ CỘT DƯỚI DẠNG CHUỖI
+            keep_default_na=False  # ← Không biến ô trống thành NaN
+            )
+        
+        if 'CCCD' in df.columns:
+            df['CCCD'] = df['CCCD'].str.strip()
+            df['CCCD'] = df['CCCD'].str.replace(r'\.0$', '', regex=True)  # xóa .0
+            df['CCCD'] = df['CCCD'].str.zfill(12)  # thêm 0 vào đầu nếu thiếu
+
         if df.empty:
             messagebox.showwarning("Lỗi", "File Excel không có dữ liệu!")
             return False
