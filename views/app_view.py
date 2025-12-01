@@ -162,6 +162,8 @@ class AppView:
         self.btn_import.pack(side="right", padx=6)
         self.btn_export = ttk.Button(btn_frame, text="Xuất Excel", width=18)
         self.btn_export.pack(side="right", padx=6)
+        self.btn_duplicate = ttk.Button(btn_frame, text="Nhân bản hồ sơ", width=22)
+        self.btn_duplicate.pack(side="left", padx=8)
         ttk.Button(btn_frame, text="Hủy nhập", command=self.clear_form, width=14).pack(side="left", padx=6)
 
         # Table
@@ -216,6 +218,7 @@ class AppView:
         self.btn_template.config(command=lambda: self.export_template())
         self.btn_import.config(command=lambda: self.import_from_excel())
         self.btn_export.config(command=lambda: self.export_to_excel())
+        self.btn_duplicate.config(command=self.duplicate_record)
 
     def _setup_bindings(self):
         # ĐÃ XÓA update_noidung → Kết quả và Nội dung giờ độc lập hoàn toàn
@@ -321,6 +324,53 @@ class AppView:
         labels = [f"Tổng: {stats_data['total']}", f"Đạt: {stats_data['dat']}", f"Trượt: {stats_data['truot']}", f"Tỷ lệ đạt: {stats_data['ty_le']:.1f}%"]
         for i, text in enumerate(labels):
             ttk.Label(self.stats_frame, text=text, font=("Arial", 10, "bold"), foreground="blue").grid(row=0, column=i, padx=15)
+    
+    def duplicate_record(self):
+        """Click nút → copy dữ liệu dòng đang chọn → điền vào form để tạo hồ sơ mới"""
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ trong bảng để copy!")
+            return
+        
+        item = self.tree.item(sel[0])
+        values = item["values"]
+
+        # Clear form trước
+        self.clear_form()
+
+        try:
+            from datetime import datetime
+
+            # Điền dữ liệu cũ vào form
+            self.entries["Họ tên người nộp"].insert(0, values[1])
+            self.entries["Ngày sinh"].set_date(datetime.strptime(values[2], "%d/%m/%Y"))
+            self.entries["CCCD"].insert(0, values[3])
+            self.entries["Hạng đào tạo"].set(values[4])
+            self.entries["CSĐT"].insert(0, values[5])
+            self.entries["Ngày nộp hồ sơ"].set_date(datetime.strptime(values[6], "%d/%m/%Y"))
+            self.entries["Hạng SH"].set(values[7])
+            self.entries["Tiếp nhận phần mềm"].insert(0, values[8])
+            self.entries["Ngày SH"].set_date(datetime.strptime(values[9], "%d/%m/%Y"))
+            self.entries["Trung tâm sát hạch"].insert(0, values[10])
+            self.entries["Nội dung sát hạch"].set(values[11])
+            
+            # Kết quả sát hạch (dùng Combobox mới)
+            self.result_var.set(values[12])
+            
+            self.entries["Ghi chú"].insert(0, values[13])
+            self.thi_var.set(values[14])  # Trạng thái thi
+
+            # Bắt buộc để tạo bản ghi MỚI
+            self.current_id.set("")
+
+            messagebox.showinfo(
+                "THÀNH CÔNG!", 
+                "Đã copy toàn bộ dữ liệu hồ sơ cũ vào form!\n"
+                "Bạn chỉ cần sửa lại các thông tin cần thiết rồi nhấn LƯU HỒ SƠ là xong!"
+            )
+
+        except Exception as e:
+            messagebox.showerror("Lỗi copy", f"Chi tiết lỗi:\n{e}")
 
     def run(self):
         self.root.mainloop()
