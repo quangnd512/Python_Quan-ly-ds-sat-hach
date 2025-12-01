@@ -180,7 +180,7 @@ class AppController:
         self.view.thi_var.set(values[14])
 
     def delete_record_ui(self, item):
-        if not self.view.show_message("Xác nhận", "Xóa mềm hồ sơ này?", "askyesno"):
+        if not self.view.show_message("Xác nhận", "Bạn muốn xóa hồ sơ này?", "askyesno"):
             return
         delete_record(self.view.tree.item(item)["values"][0])
         self.show_data()

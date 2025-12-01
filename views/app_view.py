@@ -12,8 +12,8 @@ class AppView:
         self.root.configure(bg="#f5f6fa")
 
         self.entries = {}
-        self.result_var = tk.StringVar(value="Thi trượt")
-        self.thi_var = tk.StringVar(value="Phục hồi")  # Mặc định Phục hồi
+        self.result_var = tk.StringVar(value="Đạt")        # ← Mặc định là "Đạt"
+        self.thi_var = tk.StringVar(value="Phục hồi")      # Mặc định Phục hồi
         self.search_var = tk.StringVar()
         self.current_id = tk.StringVar()
 
@@ -55,6 +55,16 @@ class AppView:
         ]
         self.required_fields = ["Họ tên người nộp", "Ngày sinh", "CCCD", "Hạng đào tạo", "Hạng SH", "Nội dung sát hạch"]
 
+        # 6 lựa chọn mới cho Kết quả sát hạch
+        self.ketqua_options = [
+            "Đạt",
+            "Trượt M+H+Đ",
+            "Trượt M+Đ",
+            "Trượt H",
+            "Trượt H+Đ",
+            "Trượt Đ"
+        ]
+
     def _setup_ui(self):
         wrapper = tk.Frame(self.root, bg="#f5f6fa")
         wrapper.pack(fill="x", pady=15)
@@ -78,38 +88,49 @@ class AppView:
                 entry.set_date(date.today())
             elif label == "Ngày sinh":
                 entry = DateEntry(frame_form, width=22, date_pattern="dd/mm/yyyy")
-                entry.delete(0, "end")  # Trống, có lịch
+                entry.delete(0, "end")
             elif label in ["Hạng đào tạo", "Hạng SH"]:
                 entry = ttk.Combobox(frame_form, values=self.hang_options, width=26, state="readonly")
-                entry.set(self.hang_options[0])  # Mặc định B.01
+                entry.set(self.hang_options[0])
             elif label == "Nội dung sát hạch":
                 entry = ttk.Combobox(frame_form, values=self.noidung_options, width=26, state="readonly")
-                entry.set(self.noidung_options[0])  # Mặc định SH lần đầu
+                entry.set(self.noidung_options[0])
             else:
                 entry = tk.Entry(frame_form, width=28)
 
             entry.grid(row=row, column=col*2 + 1, padx=10, pady=6)
             self.entries[label] = entry
 
-        # Kết quả + Trạng thái thi
+        # === KẾT QUẢ SÁT HẠCH + TRẠNG THÁI THI ===
         status_row = len(self.labels) // 2 + 1
         status_frame = tk.Frame(frame_form, bg="white")
-        status_frame.grid(row=status_row, column=0, columnspan=4, pady=10, sticky="ew")
+        status_frame.grid(row=status_row, column=0, columnspan=4, pady=15, sticky="ew")
 
-        # Kết quả sát hạch
+        # KẾT QUẢ SÁT HẠCH – DẠNG DROPDOWN (COMBOBOX) SIÊU ĐẸP
         result_frame = tk.Frame(status_frame, bg="white")
         result_frame.grid(row=0, column=0, sticky="w", padx=(20, 40))
-        tk.Label(result_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white").pack(side="left")
-        tk.Radiobutton(result_frame, text="Thi đạt", variable=self.result_var, value="Thi đạt", bg="white").pack(side="left", padx=5)
-        tk.Radiobutton(result_frame, text="Thi trượt", variable=self.result_var, value="Thi trượt", bg="white").pack(side="left", padx=5)
+
+        tk.Label(result_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white", fg="#2c3e50").pack(side="left", padx=(0, 10))
+
+        self.ketqua_cb = ttk.Combobox(
+            result_frame,
+            textvariable=self.result_var,
+            values=self.ketqua_options,
+            width=18,
+            state="readonly",
+            font=("Arial", 10),
+            justify="center"
+        )
+        self.ketqua_cb.pack(side="left")
+        self.ketqua_cb.set("Đạt")  # Mặc định Đạt
 
         # Trạng thái thi
         thi_frame = tk.Frame(status_frame, bg="white")
         thi_frame.grid(row=0, column=1, sticky="e", padx=(40, 20))
-        tk.Label(thi_frame, text="Trạng thái thi*:", font=("Arial", 10, "bold"), bg="white").pack(side="left", padx=(0, 2))
+        tk.Label(thi_frame, text="Trạng thái thi*:", font=("Arial", 10, "bold"), bg="white").pack(side="left")
         tk.Label(thi_frame, text="*", fg="red", bg="white", font=("Arial", 10, "bold")).pack(side="left")
-        tk.Radiobutton(thi_frame, text="Thi mới", variable=self.thi_var, value="Thi mới", bg="white").pack(side="right", padx=5)
-        tk.Radiobutton(thi_frame, text="Phục hồi", variable=self.thi_var, value="Phục hồi", bg="white").pack(side="right", padx=5)
+        tk.Radiobutton(thi_frame, text="Thi mới", variable=self.thi_var, value="Thi mới", bg="white").pack(side="right", padx=8)
+        tk.Radiobutton(thi_frame, text="Phục hồi", variable=self.thi_var, value="Phục hồi", bg="white").pack(side="right", padx=8)
 
         # Search
         search_frame = tk.Frame(self.root, bg="#f5f6fa")
@@ -135,8 +156,6 @@ class AppView:
         self.btn_edit.pack(side="left", padx=6)
         self.btn_del_soft = ttk.Button(btn_frame, text="Xóa hồ sơ", width=18)
         self.btn_del_soft.pack(side="left", padx=6)
-        # self.btn_del_hard = ttk.Button(btn_frame, text="Xóa vĩnh viễn", width=18)
-        # self.btn_del_hard.pack(side="left", padx=6)
         self.btn_template = ttk.Button(btn_frame, text="Tải mẫu Excel", width=18)
         self.btn_template.pack(side="right", padx=6)
         self.btn_import = ttk.Button(btn_frame, text="Nhập Excel", width=18)
@@ -164,24 +183,17 @@ class AppView:
             xscrollcommand=scroll_x.set
         )
 
-        # ẨN CỘT ID HOÀN TOÀN – KHÔNG CÒN HIỆN DÙ 1 PIXEL!
         self.tree.column("ID", width=0, minwidth=0, stretch=False)
         self.tree.heading("ID", text="")
-
-        # CHỈ HIỂN THỊ CÁC CỘT BẠN MUỐN (BẮT BUỘC DÙNG DÒNG NÀY!)
         self.tree["displaycolumns"] = ("Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
                                        "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung",
                                        "Kết quả", "Ghi chú", "Trạng thái thi")
 
-        # Cấu hình các cột còn lại (giữ nguyên như bạn đã làm)
-        for col in cols[2:]:  # Bỏ ID và STT
+        for col in cols[1:]:
             self.tree.heading(col, text=col)
-            if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"]:
-                self.tree.column(col, width=150, anchor="w")
-            elif col in ["Ngày sinh", "Ngày nộp", "Ngày SH"]:
-                self.tree.column(col, width=110, anchor="center")
-            else:
-                self.tree.column(col, width=120, anchor="center")
+            width = 150 if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else 110
+            anchor = "w" if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else "center"
+            self.tree.column(col, width=width, anchor=anchor)
 
         scroll_y.config(command=self.tree.yview)
         scroll_y.pack(side="right", fill="y")
@@ -192,11 +204,6 @@ class AppView:
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
         style.configure("Treeview", font=("Arial", 9))
-        for col in cols:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=110, anchor="center")
-
-        
 
     def set_controller(self, controller):
         self.controller = controller
@@ -206,25 +213,18 @@ class AppView:
         self.btn_save.config(command=self.controller.save_record)
         self.btn_edit.config(command=lambda: self.edit_record())
         self.btn_del_soft.config(command=lambda: self.delete_record_ui())
-        # self.btn_del_hard.config(command=lambda: self.delete_record_data())
         self.btn_template.config(command=lambda: self.export_template())
         self.btn_import.config(command=lambda: self.import_from_excel())
         self.btn_export.config(command=lambda: self.export_to_excel())
 
     def _setup_bindings(self):
-        self.result_var.trace("w", self.update_noidung)
+        # ĐÃ XÓA update_noidung → Kết quả và Nội dung giờ độc lập hoàn toàn
         self.entries["Hạng đào tạo"].bind("<<ComboboxSelected>>", self.on_hang_dt_change)
         self.entries["Ngày nộp hồ sơ"].bind("<<DateEntrySelected>>", lambda e: self.root.after(100, self.update_nam_sinh_from_ngay_nop))
         self.search_entry.bind("<KeyRelease>", self.do_search)
         self.tree.bind("<Double-1>", self.edit_record)
         self.root.bind("<Control-s>", lambda e: self.controller.save_record())
         self.root.bind("<Escape>", lambda e: self.clear_form())
-
-    def update_noidung(self, *args):
-        if self.result_var.get() == "Thi đạt":
-            self.entries["Nội dung sát hạch"].set("Đã đạt")
-        elif self.entries["Nội dung sát hạch"].get() == "Đã đạt":
-            self.entries["Nội dung sát hạch"].set(self.noidung_options[0])
 
     def on_hang_dt_change(self, event):
         hang_dt = self.entries["Hạng đào tạo"].get()
@@ -270,7 +270,7 @@ class AppView:
                 entry.set(entry["values"][0] if entry["values"] else "")
             else:
                 entry.delete(0, tk.END)
-        self.result_var.set("Thi trượt")
+        self.result_var.set("Đạt")        # ← Mặc định Đạt
         self.thi_var.set("Phục hồi")
         self.root.after(100, self.update_nam_sinh_from_ngay_nop)
 
@@ -280,9 +280,6 @@ class AppView:
 
     def do_search(self, event=None):
         self.controller.do_search(self.search_var.get().strip())
-
-    def save_record(self, *args):
-        self.controller.save_record()
 
     def edit_record(self, *args):
         sel = self.tree.selection()
@@ -294,11 +291,6 @@ class AppView:
         if sel:
             self.controller.delete_record_ui(sel[0])
 
-    def delete_record_data(self):
-        sel = self.tree.selection()
-        if sel:
-            self.controller.delete_record_data(sel[0])
-
     def export_template(self):
         self.controller.export_template()
 
@@ -309,7 +301,6 @@ class AppView:
         self.controller.export_to_excel()
 
     def update_tree(self, rows):
-        # Xóa dữ liệu cũ
         for item in self.tree.get_children():
             self.tree.delete(item)
         for r in rows:
