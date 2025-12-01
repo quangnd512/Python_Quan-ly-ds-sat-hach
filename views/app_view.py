@@ -296,15 +296,24 @@ class AppView:
 
     def edit_record(self, *args):
         sel = self.tree.selection()
-        if sel: self.controller.edit_record(sel[0])
+        if not sel:
+            return
+        item = sel[0]                     # ← lấy phần tử đầu tiên của tuple
+        self.controller.edit_record(item)   # ← truyền thẳng iid (là id thật)
 
     def delete_record_ui(self):
         sel = self.tree.selection()
-        if sel: self.controller.delete_record_ui(sel[0])
+        if not sel:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ để xóa!")
+            return
+        item = sel[0]                     # ← lấy iid thật
+        self.controller.delete_record_ui(item)
 
     def update_tree(self, rows):
-        for i in self.tree.get_children(): self.tree.delete(i)
-        for r in rows: self.tree.insert("", "end", values=r)
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+        for r in rows:
+            self.tree.insert("", "end", iid=str(r[0]), values=r[1:])
 
     def update_summary(self, data):
         for w in self.summary_frame.winfo_children(): w.destroy()

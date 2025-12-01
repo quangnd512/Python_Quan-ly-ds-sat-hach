@@ -49,7 +49,7 @@ class AppController:
 
     def update_stats(self, rows):
         total = len(rows)
-        dat = sum(1 for r in rows if r["ket_qua"] == "Thi đạt")
+        dat = sum(1 for r in rows if r["ket_qua"] == "Đạt")
         truot = total - dat
         ty_le = round((dat / total * 100), 1) if total else 0
         self.view.update_stats({"total": total, "dat": dat, "truot": truot, "ty_le": ty_le})
@@ -133,36 +133,61 @@ class AppController:
         self.view.clear_form()
         self.show_data()
 
-    def edit_record(self, item):
-        values = self.view.tree.item(item)["values"]
-        self.view.set_current_id(values[0])
+    def edit_record(self, item_iid):
+        # item_iid bây giờ chính là id thật dưới dạng chuỗi
+        try:
+            record_id = int(item_iid)
+        except:
+            return
+
+        # Lấy dữ liệu trực tiếp từ CSDL để chắc chắn 100%
+        from models.db import get_connection
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM hoc_vien WHERE id = ? AND deleted = 0", (record_id,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            messagebox.showerror("Lỗi", "Không tìm thấy hồ sơ!")
+            return
+
+        r = dict(row)
+        self.view.set_current_id(record_id)
         self.view.clear_form()
 
-        self.view.entries["Họ tên người nộp"].insert(0, values[1])
-        self.view.entries["CCCD"].insert(0, values[3])
-        self.view.entries["CSĐT"].insert(0, values[5])
-        self.view.entries["Tiếp nhận phần mềm"].insert(0, values[8])
-        self.view.entries["Trung tâm sát hạch"].insert(0, values[10])
-        self.view.entries["Ghi chú"].insert(0, values[13] if len(values) > 13 else "")
+        # Điền dữ liệu vào form (giữ nguyên code cũ của bạn, chỉ rút gọn)
+        self.view.entries["Họ tên người nộp"].insert(0, r["ho_ten"])
+        self.view.entries["CCCD"].insert(0, r["cccd"])
+        self.view.entries["CSĐT"].insert(0, r.get("csdt", ""))
+        self.view.entries["Tiếp nhận phần mềm"].insert(0, r.get("tiep_nhan", ""))
+        self.view.entries["Trung tâm sát hạch"].insert(0, r.get("trung_tam", ""))
+        self.view.entries["Ghi chú"].insert(0, r.get("ghi_chu", ""))
 
-        self.view.entries["Hạng đào tạo"].set(values[4])
-        self.view.entries["Hạng SH"].set(values[7])
-        self.view.entries["Nội dung sát hạch"].set(values[11])
-        self.view.result_var.set(values[12])
-        self.view.thi_var.set(values[14] if len(values) > 14 else "Phục hồi")
+        self.view.entries["Hạng đào tạo"].set(r["hang_dao_tao"])
+        self.view.entries["Hạng SH"].set(r["hang_sh"])
+        self.view.entries["Nội dung sát hạch"].set(r["noi_dung"])
+        self.view.result_var.set(r["ket_qua"])
+        self.view.thi_var.set(r["trang_thai_thi"])
 
         try:
-            self.view.entries["Ngày sinh"].set_date(datetime.strptime(values[2], "%d/%m/%Y"))
-            self.view.entries["Ngày nộp hồ sơ"].set_date(datetime.strptime(values[6], "%d/%m/%Y"))
-            if values[9] and values[9].strip():
-                self.view.entries["Ngày SH"].set_date(datetime.strptime(values[9], "%d/%m/%Y"))
-        except:
-            pass
+            if r["ngay_sinh"]: self.view.entries["Ngày sinh"].set_date(r["ngay_sinh"])
+            if r["ngay_nop_hoso"]: self.view.entries["Ngày nộp hồ sơ"].set_date(r["ngay_nop_hoso"])
+            if r["ngay_sh"]: self.view.entries["Ngày SH"].set_date(r["ngay_sh"])
+        except: pass
 
-    def delete_record_ui(self, item):
-        if self.view.show_message("Xác nhận", "Bạn có chắc chắn muốn xóa hồ sơ này?", "askyesno"):
-            delete_record(self.view.tree.item(item)["values"][0])
-            self.show_data()
+    def delete_record_ui(self, item_iid):
+        try:
+            record_id = int(item_iid)          # ← chắc chắn là int
+        except:
+            return
+
+        if messagebox.askyesno("Xác nhận xóa",
+            "Bạn có chắc chắn muốn xóa?"):
+            from models.db import delete_record
+            delete_record(record_id)
+            messagebox.showinfo("Thành công", "Đã xóa hồ sơ thành công!")
+            self.show_data()                   # ← tải lại bảng ngay lập tức
 
     def delete_record_data(self, item):
         if self.view.show_message("CẢNH BÁO", "XÓA VĨNH VIỄN - Không thể khôi phục!", "askyesno"):
