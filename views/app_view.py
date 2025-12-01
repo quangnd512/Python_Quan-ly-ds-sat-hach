@@ -12,16 +12,17 @@ class AppView:
         self.root.configure(bg="#f5f6fa")
 
         self.entries = {}
-        self.result_var = tk.StringVar(value="Đạt")        # ← Mặc định là "Đạt"
-        self.thi_var = tk.StringVar(value="Phục hồi")      # Mặc định Phục hồi
+        self.result_var = tk.StringVar(value="Đạt")
+        self.thi_var = tk.StringVar(value="Phục hồi")
         self.search_var = tk.StringVar()
+        self.noidung_search_var = tk.StringVar(value="All")
+        self.trangthai_search_var = tk.StringVar(value="All")
         self.current_id = tk.StringVar()
 
         self._setup_options()
         self._setup_ui()
         self._setup_bindings()
 
-        # Tự động điền năm sinh = ngày nộp - 18 năm
         self.root.after(100, self.update_nam_sinh_from_ngay_nop)
 
     def update_nam_sinh_from_ngay_nop(self):
@@ -43,10 +44,10 @@ class AppView:
             "Ngày SH", "Trung tâm sát hạch",
             "Nội dung sát hạch", "Ghi chú"
         ]
-        self.hang_options = ["B.01", "B", "C1", "C", "D1", "D2", "D", "BE", "C1E", "CE",
-                             "D1E", "D2E", "DE", "B nâng C", "B nâng D1", "B nâng D2",
-                             "C1 nâng C", "C1 nâng D1", "C1 nâng D2", "C nâng D1",
-                             "C nâng D2", "C nâng D", "C nâng CE"]
+        self.hang_options = ["B.01","B","C1","C","D1","D2","D","BE","C1E","CE",
+                             "D1E","D2E","DE","B nâng C","B nâng D1","B nâng D2",
+                             "C1 nâng C","C1 nâng D1","C1 nâng D2","C nâng D1",
+                             "C nâng D2","C nâng D","C nâng CE"]
         self.noidung_options = [
             "SH lần đầu (L+M+H+Đ)", "SH lại (Đ)", "SH lại (H)", "SH lại (H+Đ)",
             "SH lại (L+M+H+Đ)", "SH lại (L)", "SH lại (L+M)", "SH lại (L+M+H)",
@@ -55,14 +56,8 @@ class AppView:
         ]
         self.required_fields = ["Họ tên người nộp", "Ngày sinh", "CCCD", "Hạng đào tạo", "Hạng SH", "Nội dung sát hạch"]
 
-        # 6 lựa chọn mới cho Kết quả sát hạch
         self.ketqua_options = [
-            "Đạt",
-            "Trượt M+H+Đ",
-            "Trượt M+Đ",
-            "Trượt H",
-            "Trượt H+Đ",
-            "Trượt Đ"
+            "Đạt", "Trượt M+H+Đ", "Trượt M+Đ", "Trượt H", "Trượt H+Đ", "Trượt Đ"
         ]
 
     def _setup_ui(self):
@@ -101,28 +96,19 @@ class AppView:
             entry.grid(row=row, column=col*2 + 1, padx=10, pady=6)
             self.entries[label] = entry
 
-        # === KẾT QUẢ SÁT HẠCH + TRẠNG THÁI THI ===
+        # Kết quả sát hạch + Trạng thái thi
         status_row = len(self.labels) // 2 + 1
         status_frame = tk.Frame(frame_form, bg="white")
         status_frame.grid(row=status_row, column=0, columnspan=4, pady=15, sticky="ew")
 
-        # KẾT QUẢ SÁT HẠCH – DẠNG DROPDOWN (COMBOBOX) SIÊU ĐẸP
+        # Kết quả sát hạch (Dropdown)
         result_frame = tk.Frame(status_frame, bg="white")
         result_frame.grid(row=0, column=0, sticky="w", padx=(20, 40))
-
-        tk.Label(result_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white", fg="#2c3e50").pack(side="left", padx=(0, 10))
-
-        self.ketqua_cb = ttk.Combobox(
-            result_frame,
-            textvariable=self.result_var,
-            values=self.ketqua_options,
-            width=18,
-            state="readonly",
-            font=("Arial", 10),
-            justify="center"
-        )
+        tk.Label(result_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white", fg="#2c3e50").pack(side="left", padx=(0,10))
+        self.ketqua_cb = ttk.Combobox(result_frame, textvariable=self.result_var, values=self.ketqua_options,
+                                      width=18, state="readonly", font=("Arial", 10), justify="center")
         self.ketqua_cb.pack(side="left")
-        self.ketqua_cb.set("Đạt")  # Mặc định Đạt
+        self.ketqua_cb.set("Đạt")
 
         # Trạng thái thi
         thi_frame = tk.Frame(status_frame, bg="white")
@@ -132,64 +118,64 @@ class AppView:
         tk.Radiobutton(thi_frame, text="Thi mới", variable=self.thi_var, value="Thi mới", bg="white").pack(side="right", padx=8)
         tk.Radiobutton(thi_frame, text="Phục hồi", variable=self.thi_var, value="Phục hồi", bg="white").pack(side="right", padx=8)
 
-        # Search
+        # THANH TÌM KIẾM NÂNG CAO
         search_frame = tk.Frame(self.root, bg="#f5f6fa")
-        search_frame.pack(fill="x", pady=10)
-        tk.Label(search_frame, text="Tìm kiếm (Họ tên / CCCD):", bg="#f5f6fa", font=("Arial", 10, "bold")).pack(side="left", padx=10)
-        self.search_entry = tk.Entry(search_frame, textvariable=self.search_var, width=40)
-        self.search_entry.pack(side="left", padx=10)
-        ttk.Button(search_frame, text="Hiển thị tất cả", command=self.reset_search, width=18).pack(side="left", padx=6)
+        search_frame.pack(fill="x", pady=10, padx=15)
+
+        tk.Label(search_frame, text="Tìm kiếm:", bg="#f5f6fa", font=("Arial", 11, "bold")).pack(side="left", padx=(0,8))
+        tk.Entry(search_frame, textvariable=self.search_var, width=35, font=("Arial", 10)).pack(side="left", padx=4)
+
+        ttk.Label(search_frame, text="Nội dung SH:").pack(side="left", padx=(20,4))
+        ttk.Combobox(search_frame, textvariable=self.noidung_search_var,
+                     values=["All"] + self.noidung_options, width=30, state="readonly").pack(side="left", padx=4)
+
+        ttk.Label(search_frame, text="Trạng thái thi:").pack(side="left", padx=(20,4))
+        ttk.Combobox(search_frame, textvariable=self.trangthai_search_var,
+                     values=["All", "Thi mới", "Phục hồi"], width=15, state="readonly").pack(side="left", padx=4)
+
+        ttk.Button(search_frame, text="Tìm kiếm", command=self.trigger_search).pack(side="left", padx=10)
+        ttk.Button(search_frame, text="Hiển thị tất cả", command=self.reset_search).pack(side="left", padx=6)
 
         # Summary & Stats
         self.summary_frame = tk.Frame(self.root, bg="#f5f6fa")
         self.summary_frame.pack(pady=8, fill="x")
-
         self.stats_frame = tk.LabelFrame(self.root, text="Thống kê", font=("Arial", 11, "bold"), bg="white", padx=10, pady=5)
         self.stats_frame.pack(fill="x", padx=15, pady=5)
 
         # Buttons
         btn_frame = tk.Frame(self.root, bg="#f5f6fa")
         btn_frame.pack(fill="x", pady=8)
+
         self.btn_save = ttk.Button(btn_frame, text="Lưu hồ sơ", width=18)
         self.btn_save.pack(side="left", padx=6)
         self.btn_edit = ttk.Button(btn_frame, text="Sửa hồ sơ", width=18)
         self.btn_edit.pack(side="left", padx=6)
         self.btn_del_soft = ttk.Button(btn_frame, text="Xóa hồ sơ", width=18)
         self.btn_del_soft.pack(side="left", padx=6)
+
+        # NÚT SIÊU PHẨM: Thêm mới từ hồ sơ cũ
+        self.btn_duplicate = ttk.Button(btn_frame, text="Thêm mới từ hồ sơ cũ", width=24)
+        self.btn_duplicate.pack(side="left", padx=12)
+
         self.btn_template = ttk.Button(btn_frame, text="Tải mẫu Excel", width=18)
         self.btn_template.pack(side="right", padx=6)
         self.btn_import = ttk.Button(btn_frame, text="Nhập Excel", width=18)
         self.btn_import.pack(side="right", padx=6)
         self.btn_export = ttk.Button(btn_frame, text="Xuất Excel", width=18)
         self.btn_export.pack(side="right", padx=6)
-        self.btn_duplicate = ttk.Button(btn_frame, text="Nhân bản hồ sơ", width=22)
-        self.btn_duplicate.pack(side="left", padx=8)
         ttk.Button(btn_frame, text="Hủy nhập", command=self.clear_form, width=14).pack(side="left", padx=6)
 
-        # Table
+        # Treeview
         frame_table = tk.LabelFrame(self.root, text="Danh sách hồ sơ", font=("Arial", 12, "bold"), bg="white", padx=10, pady=10)
         frame_table.pack(fill="both", expand=True, padx=15, pady=10)
 
-        cols = ["ID", "Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp", 
-                "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung", 
+        cols = ["ID", "Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
+                "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung",
                 "Kết quả", "Ghi chú", "Trạng thái thi"]
 
-        scroll_y = ttk.Scrollbar(frame_table, orient="vertical")
-        scroll_x = ttk.Scrollbar(frame_table, orient="horizontal")
-
-        self.tree = ttk.Treeview(
-            frame_table,
-            columns=cols,
-            show="headings",
-            yscrollcommand=scroll_y.set,
-            xscrollcommand=scroll_x.set
-        )
-
+        self.tree = ttk.Treeview(frame_table, columns=cols, show="headings")
         self.tree.column("ID", width=0, minwidth=0, stretch=False)
-        self.tree.heading("ID", text="")
-        self.tree["displaycolumns"] = ("Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
-                                       "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung",
-                                       "Kết quả", "Ghi chú", "Trạng thái thi")
+        self.tree["displaycolumns"] = cols[1:]
 
         for col in cols[1:]:
             self.tree.heading(col, text=col)
@@ -197,151 +183,38 @@ class AppView:
             anchor = "w" if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else "center"
             self.tree.column(col, width=width, anchor=anchor)
 
-        scroll_y.config(command=self.tree.yview)
-        scroll_y.pack(side="right", fill="y")
-        scroll_x.config(command=self.tree.xview)
-        scroll_x.pack(side="bottom", fill="x")
+        scrollbar_y = ttk.Scrollbar(frame_table, orient="vertical", command=self.tree.yview)
+        scrollbar_x = ttk.Scrollbar(frame_table, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        scrollbar_y.pack(side="right", fill="y")
+        scrollbar_x.pack(side="bottom", fill="x")
         self.tree.pack(fill="both", expand=True)
 
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
         style.configure("Treeview", font=("Arial", 9))
 
-    def set_controller(self, controller):
-        self.controller = controller
-        self.setup_controller_commands()
-
-    def setup_controller_commands(self):
-        self.btn_save.config(command=self.controller.save_record)
-        self.btn_edit.config(command=lambda: self.edit_record())
-        self.btn_del_soft.config(command=lambda: self.delete_record_ui())
-        self.btn_template.config(command=lambda: self.export_template())
-        self.btn_import.config(command=lambda: self.import_from_excel())
-        self.btn_export.config(command=lambda: self.export_to_excel())
-        self.btn_duplicate.config(command=self.duplicate_record)
-
-    def _setup_bindings(self):
-        # ĐÃ XÓA update_noidung → Kết quả và Nội dung giờ độc lập hoàn toàn
-        self.entries["Hạng đào tạo"].bind("<<ComboboxSelected>>", self.on_hang_dt_change)
-        self.entries["Ngày nộp hồ sơ"].bind("<<DateEntrySelected>>", lambda e: self.root.after(100, self.update_nam_sinh_from_ngay_nop))
-        self.search_entry.bind("<KeyRelease>", self.do_search)
-        self.tree.bind("<Double-1>", self.edit_record)
-        self.root.bind("<Control-s>", lambda e: self.controller.save_record())
-        self.root.bind("<Escape>", lambda e: self.clear_form())
-
-    def on_hang_dt_change(self, event):
-        hang_dt = self.entries["Hạng đào tạo"].get()
-        hang_sh = self.entries["Hạng SH"]
-        if not hang_sh.get() or hang_sh.get() == getattr(event.widget, "_last", ""):
-            hang_sh.set(hang_dt)
-        event.widget._last = hang_dt
-
-    def get_data(self):
-        return {k: v.get().strip() for k, v in self.entries.items()}
-
-    def get_result(self):
-        return self.result_var.get()
-
-    def get_thi_status(self):
-        return self.thi_var.get()
-
-    def get_current_id(self):
-        return self.current_id.get()
-
-    def set_current_id(self, value):
-        self.current_id.set(value)
-
-    def show_message(self, title, message, type="info"):
-        if type == "info":
-            messagebox.showinfo(title, message)
-        elif type == "warning":
-            messagebox.showwarning(title, message)
-        elif type == "error":
-            messagebox.showerror(title, message)
-        elif type == "askyesno":
-            return messagebox.askyesno(title, message)
-
-    def clear_form(self, event=None):
-        self.current_id.set("")
-        for entry in self.entries.values():
-            if isinstance(entry, DateEntry):
-                if entry == self.entries["Ngày nộp hồ sơ"]:
-                    entry.set_date(date.today())
-                else:
-                    entry.delete(0, "end")
-            elif isinstance(entry, ttk.Combobox):
-                entry.set(entry["values"][0] if entry["values"] else "")
-            else:
-                entry.delete(0, tk.END)
-        self.result_var.set("Đạt")        # ← Mặc định Đạt
-        self.thi_var.set("Phục hồi")
-        self.root.after(100, self.update_nam_sinh_from_ngay_nop)
+    # ================== CHỨC NĂNG MỚI ==================
+    def trigger_search(self):
+        search_text = self.search_var.get().strip()
+        noidung = self.noidung_search_var.get() if self.noidung_search_var.get() != "All" else None
+        trangthai = self.trangthai_search_var.get() if self.trangthai_search_var.get() != "All" else None
+        self.controller.advanced_search(search_text, noidung, trangthai)
 
     def reset_search(self):
         self.search_var.set("")
+        self.noidung_search_var.set("All")
+        self.trangthai_search_var.set("All")
         self.controller.show_data()
 
-    def do_search(self, event=None):
-        self.controller.do_search(self.search_var.get().strip())
-
-    def edit_record(self, *args):
-        sel = self.tree.selection()
-        if sel:
-            self.controller.edit_record(sel[0])
-
-    def delete_record_ui(self):
-        sel = self.tree.selection()
-        if sel:
-            self.controller.delete_record_ui(sel[0])
-
-    def export_template(self):
-        self.controller.export_template()
-
-    def import_from_excel(self):
-        self.controller.import_from_excel()
-
-    def export_to_excel(self):
-        self.controller.export_to_excel()
-
-    def update_tree(self, rows):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        for r in rows:
-            self.tree.insert("", "end", values=r)
-
-    def update_summary(self, summary_data):
-        for w in self.summary_frame.winfo_children():
-            w.destroy()
-        ttk.Label(self.summary_frame, text="TỔNG SỐ HỒ SƠ THEO HẠNG:", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w", padx=10)
-        col = 1
-        for hang, count in summary_data.items():
-            ttk.Label(self.summary_frame, text=f"{hang}: {count}", font=("Arial", 10, "bold")).grid(row=0, column=col, padx=8)
-            col += 1
-
-    def update_stats(self, stats_data):
-        for w in self.stats_frame.winfo_children():
-            w.destroy()
-        labels = [f"Tổng: {stats_data['total']}", f"Đạt: {stats_data['dat']}", f"Trượt: {stats_data['truot']}", f"Tỷ lệ đạt: {stats_data['ty_le']:.1f}%"]
-        for i, text in enumerate(labels):
-            ttk.Label(self.stats_frame, text=text, font=("Arial", 10, "bold"), foreground="blue").grid(row=0, column=i, padx=15)
-    
     def duplicate_record(self):
-        """Click nút → copy dữ liệu dòng đang chọn → điền vào form để tạo hồ sơ mới"""
         sel = self.tree.selection()
         if not sel:
             messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ trong bảng để copy!")
             return
-        
-        item = self.tree.item(sel[0])
-        values = item["values"]
-
-        # Clear form trước
+        values = self.tree.item(sel[0], "values")
         self.clear_form()
-
         try:
-            from datetime import datetime
-
-            # Điền dữ liệu cũ vào form
             self.entries["Họ tên người nộp"].insert(0, values[1])
             self.entries["Ngày sinh"].set_date(datetime.strptime(values[2], "%d/%m/%Y"))
             self.entries["CCCD"].insert(0, values[3])
@@ -353,24 +226,93 @@ class AppView:
             self.entries["Ngày SH"].set_date(datetime.strptime(values[9], "%d/%m/%Y"))
             self.entries["Trung tâm sát hạch"].insert(0, values[10])
             self.entries["Nội dung sát hạch"].set(values[11])
-            
-            # Kết quả sát hạch (dùng Combobox mới)
             self.result_var.set(values[12])
-            
             self.entries["Ghi chú"].insert(0, values[13])
-            self.thi_var.set(values[14])  # Trạng thái thi
-
-            # Bắt buộc để tạo bản ghi MỚI
+            self.thi_var.set(values[14])
             self.current_id.set("")
-
-            messagebox.showinfo(
-                "THÀNH CÔNG!", 
-                "Đã copy toàn bộ dữ liệu hồ sơ cũ vào form!\n"
-                "Bạn chỉ cần sửa lại các thông tin cần thiết rồi nhấn LƯU HỒ SƠ là xong!"
-            )
-
+            messagebox.showinfo("THÀNH CÔNG!", "Đã copy dữ liệu cũ!\nChỉ cần sửa ngày → nhấn Lưu là xong!")
         except Exception as e:
-            messagebox.showerror("Lỗi copy", f"Chi tiết lỗi:\n{e}")
+            messagebox.showerror("Lỗi", str(e))
+
+    # ================== CÁC HÀM CŨ ==================
+    def set_controller(self, controller):
+        self.controller = controller
+        self.setup_controller_commands()
+
+    def setup_controller_commands(self):
+        self.btn_save.config(command=self.controller.save_record)
+        self.btn_edit.config(command=lambda: self.edit_record())
+        self.btn_del_soft.config(command=lambda: self.delete_record_ui())
+        self.btn_duplicate.config(command=self.duplicate_record)
+        self.btn_template.config(command=self.controller.export_template)
+        self.btn_import.config(command=self.controller.import_from_excel)
+        self.btn_export.config(command=self.controller.export_to_excel)
+
+    def _setup_bindings(self):
+        self.entries["Hạng đào tạo"].bind("<<ComboboxSelected>>", self.on_hang_dt_change)
+        self.entries["Ngày nộp hồ sơ"].bind("<<DateEntrySelected>>", lambda e: self.root.after(100, self.update_nam_sinh_from_ngay_nop))
+        self.search_var.trace("w", lambda *_: self.trigger_search())
+        self.noidung_search_var.trace("w", lambda *_: self.trigger_search())
+        self.trangthai_search_var.trace("w", lambda *_: self.trigger_search())
+        self.tree.bind("<Double-1>", self.edit_record)
+        self.root.bind("<Control-s>", lambda e: self.controller.save_record())
+        self.root.bind("<Escape>", lambda e: self.clear_form())
+
+    def on_hang_dt_change(self, event):
+        hang_dt = self.entries["Hạng đào tạo"].get()
+        hang_sh = self.entries["Hạng SH"]
+        if not hang_sh.get() or hang_sh.get() == getattr(event.widget, "_last", ""):
+            hang_sh.set(hang_dt)
+        event.widget._last = hang_dt
+
+    def get_data(self): return {k: v.get().strip() for k, v in self.entries.items()}
+    def get_result(self): return self.result_var.get()
+    def get_thi_status(self): return self.thi_var.get()
+    def get_current_id(self): return self.current_id.get()
+    def set_current_id(self, value): self.current_id.set(value)
+
+    def show_message(self, title, message, type="info"):
+        {"info": messagebox.showinfo, "warning": messagebox.showwarning,
+         "error": messagebox.showerror, "askyesno": messagebox.askyesno}[type](title, message)
+
+    def clear_form(self, event=None):
+        self.current_id.set("")
+        for entry in self.entries.values():
+            if isinstance(entry, DateEntry):
+                entry.set_date(date.today()) if "Ngày nộp" in entry.winfo_name() else entry.delete(0, "end")
+            elif isinstance(entry, ttk.Combobox):
+                entry.set(entry["values"][0] if entry["values"] else "")
+            else:
+                entry.delete(0, "end")
+        self.result_var.set("Đạt")
+        self.thi_var.set("Phục hồi")
+        self.root.after(100, self.update_nam_sinh_from_ngay_nop)
+
+    def edit_record(self, *args):
+        sel = self.tree.selection()
+        if sel: self.controller.edit_record(sel[0])
+
+    def delete_record_ui(self):
+        sel = self.tree.selection()
+        if sel: self.controller.delete_record_ui(sel[0])
+
+    def update_tree(self, rows):
+        for i in self.tree.get_children(): self.tree.delete(i)
+        for r in rows: self.tree.insert("", "end", values=r)
+
+    def update_summary(self, data):
+        for w in self.summary_frame.winfo_children(): w.destroy()
+        tk.Label(self.summary_frame, text="TỔNG SỐ HỒ SƠ THEO HẠNG:", font=("Arial", 10, "bold"), bg="#f5f6fa").grid(row=0, column=0, sticky="w", padx=10)
+        col = 1
+        for hang, count in data.items():
+            tk.Label(self.summary_frame, text=f"{hang}: {count}", font=("Arial", 10, "bold"), bg="#f5f6fa").grid(row=0, column=col, padx=8)
+            col += 1
+
+    def update_stats(self, data):
+        for w in self.stats_frame.winfo_children(): w.destroy()
+        labels = [f"Tổng: {data['total']}", f"Đạt: {data['dat']}", f"Trượt: {data['truot']}", f"Tỷ lệ đạt: {data['ty_le']:.1f}%"]
+        for i, txt in enumerate(labels):
+            tk.Label(self.stats_frame, text=txt, font=("Arial", 10, "bold"), foreground="blue").grid(row=0, column=i, padx=20)
 
     def run(self):
         self.root.mainloop()
