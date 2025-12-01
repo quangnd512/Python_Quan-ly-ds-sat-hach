@@ -8,8 +8,10 @@ class AppView:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("QUẢN LÝ HỒ SƠ SÁT HẠCH - TRUNG TÂM SÁT HẠCH [TÊN]")
-        self.root.geometry("1400x900")
-        self.root.configure(bg="#f5f6fa")
+        self.root.geometry("1550x900")
+        self.root.configure(bg="#f0f2f5")
+        self.root.state('zoomed')  # Mở full màn hình nhưng vẫn đẹp
+        self.root.minsize(1400, 800)
 
         self.entries = {}
         self.result_var = tk.StringVar(value="Đạt")
@@ -20,7 +22,7 @@ class AppView:
         self.current_id = tk.StringVar()
 
         self._setup_options()
-        self._setup_ui()
+        self._create_main_layout()
         self._setup_bindings()
 
         self.root.after(100, self.update_nam_sinh_from_ngay_nop)
@@ -28,13 +30,11 @@ class AppView:
     def update_nam_sinh_from_ngay_nop(self):
         try:
             ngay_nop_str = self.entries["Ngày nộp hồ sơ"].get()
-            if not ngay_nop_str.strip():
-                return
+            if not ngay_nop_str.strip(): return
             ngay_nop = datetime.strptime(ngay_nop_str, "%d/%m/%Y")
             nam_sinh = ngay_nop.year - 18
             self.entries["Ngày sinh"].set_date(f"01/01/{nam_sinh}")
-        except:
-            pass
+        except: pass
 
     def _setup_options(self):
         self.labels = [
@@ -55,146 +55,153 @@ class AppView:
             "SH lại (M)", "SH lại (M+H)", "SH lại (M+Đ)", "SH lại (M+H+Đ)"
         ]
         self.required_fields = ["Họ tên người nộp", "Ngày sinh", "CCCD", "Hạng đào tạo", "Hạng SH", "Nội dung sát hạch"]
+        self.ketqua_options = ["Đạt", "Trượt M+H+Đ", "Trượt M+Đ", "Trượt H", "Trượt H+Đ", "Trượt Đ"]
 
-        self.ketqua_options = [
-            "Đạt", "Trượt M+H+Đ", "Trượt M+Đ", "Trượt H", "Trượt H+Đ", "Trượt Đ"
-        ]
+    def _create_main_layout(self):
+        # ================== KHUNG CHÍNH BAO QUANH 3 PHẦN TRÊN ==================
+        main_container = tk.Frame(self.root, bg="#f0f2f5")
+        main_container.pack(fill="both", expand=True, padx=15, pady=10)
 
-    def _setup_ui(self):
-        wrapper = tk.Frame(self.root, bg="#f5f6fa")
-        wrapper.pack(fill="x", pady=15)
-        wrapper.grid_columnconfigure(0, weight=1)
-        wrapper.grid_columnconfigure(1, weight=1)
-        wrapper.grid_columnconfigure(2, weight=1)
+        main_container.grid_columnconfigure(0, weight=2)   # Thống kê
+        main_container.grid_columnconfigure(1, weight=6)   # Form chính
+        main_container.grid_columnconfigure(2, weight=2)   # Tìm kiếm
+        main_container.grid_rowconfigure(0, weight=1)
 
-        frame_form = tk.LabelFrame(wrapper, text="Thông tin Hồ sơ", font=("Arial", 12, "bold"), bg="white", padx=30, pady=20)
-        frame_form.grid(row=0, column=1, sticky="n")
+        # ================== 1. THỐNG KÊ (BÊN TRÁI) ==================
+        left_panel = tk.LabelFrame(main_container, text=" Thống kê & Tổng hợp ", font=("Arial", 12, "bold"),
+                                   bg="white", fg="#2c3e50", relief="groove", bd=3)
+        left_panel.grid(row=0, column=0, sticky="nswe", padx=(0, 10))
+
+        self.summary_frame = tk.Frame(left_panel, bg="white")
+        self.summary_frame.pack(fill="x", padx=15, pady=15)
+
+        self.stats_frame = tk.LabelFrame(left_panel, text=" Thống kê kết quả ", font=("Arial", 11, "bold"),
+                                         bg="white", fg="#e74c3c", bd=2)
+        self.stats_frame.pack(fill="x", padx=15, pady=10)
+
+        # ================== 2. THÔNG TIN HỒ SƠ (GIỮA) ==================
+        center_panel = tk.LabelFrame(main_container, text=" Thông tin Hồ sơ ", font=("Arial", 13, "bold"),
+                                     bg="white", fg="#2c3e50", relief="groove", bd=4, padx=25, pady=15)
+        center_panel.grid(row=0, column=1, sticky="nswe", padx=8)
 
         for i, label in enumerate(self.labels):
             row, col = divmod(i, 2)
-            lbl_frame = tk.Frame(frame_form, bg="white")
-            lbl_frame.grid(row=row, column=col*2, sticky="e", padx=10, pady=6)
+            lbl_frame = tk.Frame(center_panel, bg="white")
+            lbl_frame.grid(row=row, column=col*2, sticky="e", padx=10, pady=8)
             tk.Label(lbl_frame, text=label + ":", font=("Arial", 10, "bold"), bg="white").pack(side="left")
             if label in self.required_fields:
-                tk.Label(lbl_frame, text="*", fg="red", bg="white", font=("Arial", 10, "bold")).pack(side="left")
+                tk.Label(lbl_frame, text=" *", fg="red", bg="white", font=("Arial", 11, "bold")).pack(side="left")
 
             if label in ["Ngày nộp hồ sơ", "Ngày SH"]:
-                entry = DateEntry(frame_form, width=22, date_pattern="dd/mm/yyyy", maxdate=date.today())
+                entry = DateEntry(center_panel, width=20, date_pattern="dd/mm/yyyy", maxdate=date.today())
                 entry.set_date(date.today())
             elif label == "Ngày sinh":
-                entry = DateEntry(frame_form, width=22, date_pattern="dd/mm/yyyy")
+                entry = DateEntry(center_panel, width=20, date_pattern="dd/mm/yyyy")
                 entry.delete(0, "end")
             elif label in ["Hạng đào tạo", "Hạng SH"]:
-                entry = ttk.Combobox(frame_form, values=self.hang_options, width=26, state="readonly")
+                entry = ttk.Combobox(center_panel, values=self.hang_options, width=24, state="readonly")
                 entry.set(self.hang_options[0])
             elif label == "Nội dung sát hạch":
-                entry = ttk.Combobox(frame_form, values=self.noidung_options, width=26, state="readonly")
+                entry = ttk.Combobox(center_panel, values=self.noidung_options, width=24, state="readonly")
                 entry.set(self.noidung_options[0])
             else:
-                entry = tk.Entry(frame_form, width=28)
+                entry = tk.Entry(center_panel, width=26, font=("Arial", 10))
 
-            entry.grid(row=row, column=col*2 + 1, padx=10, pady=6)
+            entry.grid(row=row, column=col*2 + 1, padx=10, pady=8, sticky="w")
             self.entries[label] = entry
 
-        # Kết quả sát hạch + Trạng thái thi
-        status_row = len(self.labels) // 2 + 1
-        status_frame = tk.Frame(frame_form, bg="white")
-        status_frame.grid(row=status_row, column=0, columnspan=4, pady=15, sticky="ew")
+        # Kết quả + Trạng thái thi
+        status_frame = tk.Frame(center_panel, bg="white")
+        status_frame.grid(row=len(self.labels)//2 + 1, column=0, columnspan=4, pady=25, sticky="ew")
 
-        # Kết quả sát hạch (Dropdown)
-        result_frame = tk.Frame(status_frame, bg="white")
-        result_frame.grid(row=0, column=0, sticky="w", padx=(20, 40))
-        tk.Label(result_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white", fg="#2c3e50").pack(side="left", padx=(0,10))
-        self.ketqua_cb = ttk.Combobox(result_frame, textvariable=self.result_var, values=self.ketqua_options,
-                                      width=18, state="readonly", font=("Arial", 10), justify="center")
-        self.ketqua_cb.pack(side="left")
+        tk.Label(status_frame, text="Kết quả sát hạch:", font=("Arial", 10, "bold"), bg="white").grid(row=0, column=0, padx=20, sticky="e")
+        self.ketqua_cb = ttk.Combobox(status_frame, textvariable=self.result_var, values=self.ketqua_options, width=20, state="readonly")
+        self.ketqua_cb.grid(row=0, column=1, padx=10)
         self.ketqua_cb.set("Đạt")
 
-        # Trạng thái thi
-        thi_frame = tk.Frame(status_frame, bg="white")
-        thi_frame.grid(row=0, column=1, sticky="e", padx=(40, 20))
-        tk.Label(thi_frame, text="Trạng thái thi*:", font=("Arial", 10, "bold"), bg="white").pack(side="left")
-        tk.Label(thi_frame, text="*", fg="red", bg="white", font=("Arial", 10, "bold")).pack(side="left")
-        tk.Radiobutton(thi_frame, text="Thi mới", variable=self.thi_var, value="Thi mới", bg="white").pack(side="right", padx=8)
-        tk.Radiobutton(thi_frame, text="Phục hồi", variable=self.thi_var, value="Phục hồi", bg="white").pack(side="right", padx=8)
+        tk.Label(status_frame, text="Trạng thái thi:", font=("Arial", 10, "bold"), bg="white").grid(row=0, column=2, padx=(50,10))
+        tk.Radiobutton(status_frame, text="Thi mới", variable=self.thi_var, value="Thi mới", bg="white").grid(row=0, column=3, padx=5)
+        tk.Radiobutton(status_frame, text="Phục hồi", variable=self.thi_var, value="Phục hồi", bg="white").grid(row=0, column=4)
 
-        # THANH TÌM KIẾM NÂNG CAO
-        search_frame = tk.Frame(self.root, bg="#f5f6fa")
-        search_frame.pack(fill="x", pady=10, padx=15)
+        # ================== 3. TÌM KIẾM & LỌC (BÊN PHẢI) ==================
+        right_panel = tk.LabelFrame(main_container, text=" Tìm kiếm & Lọc dữ liệu ", font=("Arial", 12, "bold"),
+                                    bg="white", fg="#2c3e50", relief="groove", bd=3, padx=20, pady=20)
+        right_panel.grid(row=0, column=2, sticky="nswe", padx=(10, 0))
 
-        tk.Label(search_frame, text="Tìm kiếm:", bg="#f5f6fa", font=("Arial", 11, "bold")).pack(side="left", padx=(0,8))
-        tk.Entry(search_frame, textvariable=self.search_var, width=35, font=("Arial", 10)).pack(side="left", padx=4)
+        tk.Label(right_panel, text="Tìm kiếm (Tên/CCCD):", font=("Arial", 11, "bold"), bg="white").pack(anchor="w", pady=(0,8))
+        tk.Entry(right_panel, textvariable=self.search_var, width=35, font=("Arial", 11)).pack(pady=5, fill="x")
 
-        ttk.Label(search_frame, text="Nội dung SH:").pack(side="left", padx=(20,4))
-        ttk.Combobox(search_frame, textvariable=self.noidung_search_var,
-                     values=["All"] + self.noidung_options, width=30, state="readonly").pack(side="left", padx=4)
+        tk.Label(right_panel, text="Nội dung sát hạch:", font=("Arial", 10, "bold"), bg="white").pack(anchor="w", pady=(20,5))
+        ttk.Combobox(right_panel, textvariable=self.noidung_search_var,
+                     values=["All"] + self.noidung_options, width=38, state="readonly").pack(pady=5, fill="x")
 
-        ttk.Label(search_frame, text="Trạng thái thi:").pack(side="left", padx=(20,4))
-        ttk.Combobox(search_frame, textvariable=self.trangthai_search_var,
-                     values=["All", "Thi mới", "Phục hồi"], width=15, state="readonly").pack(side="left", padx=4)
+        tk.Label(right_panel, text="Trạng thái thi:", font=("Arial", 10, "bold"), bg="white").pack(anchor="w", pady=(20,5))
+        ttk.Combobox(right_panel, textvariable=self.trangthai_search_var,
+                     values=["All", "Thi mới", "Phục hồi"], width=20, state="readonly").pack(pady=5, fill="x")
 
-        ttk.Button(search_frame, text="Tìm kiếm", command=self.trigger_search).pack(side="left", padx=10)
-        ttk.Button(search_frame, text="Hiển thị tất cả", command=self.reset_search).pack(side="left", padx=6)
+        btn_search_frame = tk.Frame(right_panel, bg="white")
+        btn_search_frame.pack(pady=25)
+        ttk.Button(btn_search_frame, text="TÌM KIẾM NGAY", width=16, command=self.trigger_search).pack(pady=6)
+        ttk.Button(btn_search_frame, text="HIỂN THỊ TẤT CẢ", width=16, command=self.reset_search).pack(pady=6)
 
-        # Summary & Stats
-        self.summary_frame = tk.Frame(self.root, bg="#f5f6fa")
-        self.summary_frame.pack(pady=8, fill="x")
-        self.stats_frame = tk.LabelFrame(self.root, text="Thống kê", font=("Arial", 11, "bold"), bg="white", padx=10, pady=5)
-        self.stats_frame.pack(fill="x", padx=15, pady=5)
+        # ================== KHUNG NÚT BẤM RIÊNG ==================
+        button_container = tk.Frame(self.root, bg="#3498db", relief="raised", bd=2)
+        button_container.pack(fill="x", pady=8, padx=15)
 
-        # Buttons
-        btn_frame = tk.Frame(self.root, bg="#f5f6fa")
-        btn_frame.pack(fill="x", pady=8)
+        btn_left = tk.Frame(button_container, bg="#3498db")
+        btn_left.pack(side="left", padx=20, pady=8)
 
-        self.btn_save = ttk.Button(btn_frame, text="Lưu hồ sơ", width=18)
-        self.btn_save.pack(side="left", padx=6)
-        self.btn_edit = ttk.Button(btn_frame, text="Sửa hồ sơ", width=18)
-        self.btn_edit.pack(side="left", padx=6)
-        self.btn_del_soft = ttk.Button(btn_frame, text="Xóa hồ sơ", width=18)
-        self.btn_del_soft.pack(side="left", padx=6)
+        self.btn_save = ttk.Button(btn_left, text="Lưu hồ sơ", width=16)
+        self.btn_save.pack(side="left", padx=5)
+        self.btn_edit = ttk.Button(btn_left, text="Sửa hồ sơ", width=16)
+        self.btn_edit.pack(side="left", padx=5)
+        self.btn_del_soft = ttk.Button(btn_left, text="Xóa hồ sơ", width=16)
+        self.btn_del_soft.pack(side="left", padx=5)
+        self.btn_duplicate = ttk.Button(btn_left, text="Thêm mới từ hồ sơ cũ", width=26)
+        self.btn_duplicate.pack(side="left", padx=15)
+        ttk.Button(btn_left, text="Hủy nhập", command=self.clear_form, width=14).pack(side="left", padx=5)
 
-        # NÚT SIÊU PHẨM: Thêm mới từ hồ sơ cũ
-        self.btn_duplicate = ttk.Button(btn_frame, text="Thêm mới từ hồ sơ cũ", width=24)
-        self.btn_duplicate.pack(side="left", padx=12)
+        btn_right = tk.Frame(button_container, bg="#3498db")
+        btn_right.pack(side="right", padx=20, pady=8)
+        self.btn_export = ttk.Button(btn_right, text="Xuất Excel", width=16)
+        self.btn_export.pack(side="right", padx=5)
+        self.btn_import = ttk.Button(btn_right, text="Nhập Excel", width=16)
+        self.btn_import.pack(side="right", padx=5)
+        self.btn_template = ttk.Button(btn_right, text="Tải mẫu Excel", width=16)
+        self.btn_template.pack(side="right", padx=5)
 
-        self.btn_template = ttk.Button(btn_frame, text="Tải mẫu Excel", width=18)
-        self.btn_template.pack(side="right", padx=6)
-        self.btn_import = ttk.Button(btn_frame, text="Nhập Excel", width=18)
-        self.btn_import.pack(side="right", padx=6)
-        self.btn_export = ttk.Button(btn_frame, text="Xuất Excel", width=18)
-        self.btn_export.pack(side="right", padx=6)
-        ttk.Button(btn_frame, text="Hủy nhập", command=self.clear_form, width=14).pack(side="left", padx=6)
-
-        # Treeview
-        frame_table = tk.LabelFrame(self.root, text="Danh sách hồ sơ", font=("Arial", 12, "bold"), bg="white", padx=10, pady=10)
-        frame_table.pack(fill="both", expand=True, padx=15, pady=10)
+        # ================== DANH SÁCH HỒ SƠ (CHIẾM TOÀN BỘ PHẦN DƯỚI) ==================
+        table_frame = tk.LabelFrame(self.root, text=" Danh sách hồ sơ sát hạch ", font=("Arial", 13, "bold"),
+                                    bg="white", fg="#2c3e50", bd=4, padx=10, pady=10)
+        table_frame.pack(fill="both", expand=True, padx=15, pady=(0,15))
 
         cols = ["ID", "Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
                 "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung",
                 "Kết quả", "Ghi chú", "Trạng thái thi"]
 
-        self.tree = ttk.Treeview(frame_table, columns=cols, show="headings")
-        self.tree.column("ID", width=0, minwidth=0, stretch=False)
+        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings")
+        self.tree.column("ID", width=0, stretch=False)
         self.tree["displaycolumns"] = cols[1:]
 
         for col in cols[1:]:
             self.tree.heading(col, text=col)
-            width = 150 if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else 110
-            anchor = "w" if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else "center"
-            self.tree.column(col, width=width, anchor=anchor)
+            w = 180 if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else 120
+            a = "w" if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else "center"
+            self.tree.column(col, width=w, anchor=a)
 
-        scrollbar_y = ttk.Scrollbar(frame_table, orient="vertical", command=self.tree.yview)
-        scrollbar_x = ttk.Scrollbar(frame_table, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
-        scrollbar_y.pack(side="right", fill="y")
-        scrollbar_x.pack(side="bottom", fill="x")
+        scroll_y = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        scroll_x = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        scroll_y.pack(side="right", fill="y")
+        scroll_x.pack(side="bottom", fill="x")
         self.tree.pack(fill="both", expand=True)
 
         style = ttk.Style()
-        style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
-        style.configure("Treeview", font=("Arial", 9))
+        style.theme_use('clam')
+        style.configure("Treeview.Heading", background="#34495e", foreground="white", font=("Arial", 10, "bold"))
+        style.configure("Treeview", rowheight=30, font=("Arial", 10))
 
-    # ================== CHỨC NĂNG MỚI ==================
+    # ================== CÁC HÀM KHÁC (GIỮ NGUYÊN) ==================
     def trigger_search(self):
         search_text = self.search_var.get().strip()
         noidung = self.noidung_search_var.get() if self.noidung_search_var.get() != "All" else None
@@ -234,7 +241,6 @@ class AppView:
         except Exception as e:
             messagebox.showerror("Lỗi", str(e))
 
-    # ================== CÁC HÀM CŨ ==================
     def set_controller(self, controller):
         self.controller = controller
         self.setup_controller_commands()
@@ -302,17 +308,56 @@ class AppView:
 
     def update_summary(self, data):
         for w in self.summary_frame.winfo_children(): w.destroy()
-        tk.Label(self.summary_frame, text="TỔNG SỐ HỒ SƠ THEO HẠNG:", font=("Arial", 10, "bold"), bg="#f5f6fa").grid(row=0, column=0, sticky="w", padx=10)
-        col = 1
+        tk.Label(self.summary_frame, text="TỔNG SỐ HỒ SƠ THEO HẠNG:", font=("Arial", 10, "bold"), bg="white", fg="#2c3e50").pack(anchor="w", padx=10, pady=8)
+        frame = tk.Frame(self.summary_frame, bg="white")
+        frame.pack(fill="x", pady=5)
+        col = 0
         for hang, count in data.items():
-            tk.Label(self.summary_frame, text=f"{hang}: {count}", font=("Arial", 10, "bold"), bg="#f5f6fa").grid(row=0, column=col, padx=8)
+            tk.Label(frame, text=f"{hang}: {count}", font=("Arial", 10, "bold"), bg="#ecf0f1", padx=15, pady=8, relief="solid").grid(row=0, column=col, padx=5)
             col += 1
 
     def update_stats(self, data):
-        for w in self.stats_frame.winfo_children(): w.destroy()
-        labels = [f"Tổng: {data['total']}", f"Đạt: {data['dat']}", f"Trượt: {data['truot']}", f"Tỷ lệ đạt: {data['ty_le']:.1f}%"]
-        for i, txt in enumerate(labels):
-            tk.Label(self.stats_frame, text=txt, font=("Arial", 10, "bold"), foreground="blue").grid(row=0, column=i, padx=20)
+        # Xóa hết nội dung cũ
+        for w in self.stats_frame.winfo_children():
+            w.destroy()
+
+        # Danh sách thống kê
+        stats = [
+            ("TỔNG HỒ SƠ", data['total'], "#34495e"),
+            ("ĐẠT", data['dat'], "#27ae60"),
+            ("TRƯỢT", data['truot'], "#e74c3c"),
+            ("TỶ LỆ ĐẠT", f"{data['ty_le']:.1f}%", "#3498db")
+        ]
+
+        # Hiển thị theo chiều dọc (mỗi dòng 1 label đẹp)
+        for i, (label_text, value, color) in enumerate(stats):
+            # Frame bao mỗi dòng để dễ căn chỉnh
+            row_frame = tk.Frame(self.stats_frame, bg="white")
+            row_frame.pack(fill="x", padx=10, pady=6)
+
+            # Nhãn tiêu đề (Tổng, Đạt, Trượt...)
+            tk.Label(
+                row_frame,
+                text=label_text,
+                font=("Arial", 10, "bold"),
+                bg="white",
+                fg="#2c3e50",
+                width=15,
+                anchor="w"
+            ).pack(side="left")
+
+            # Giá trị (số liệu lớn, đậm, nổi bật)
+            tk.Label(
+                row_frame,
+                text=value,
+                font=("Arial", 10, "bold"),
+                bg=color,
+                fg="white",
+                padx=12,
+                # pady=8,
+                relief="raised",
+                bd=2
+            ).pack(side="right")
 
     def run(self):
         self.root.mainloop()
