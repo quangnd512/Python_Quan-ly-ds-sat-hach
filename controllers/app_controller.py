@@ -71,67 +71,61 @@ class AppController:
         return True, data
 
     def save_record(self):
-        ok, res = self.validate_and_prepare()
-        if not ok:
-            self.view.show_message("Lỗi nhập liệu", res, "warning")
+        current_id = self.view.get_current_id()
+        print("="*60)
+        print(f"[SAVE_RECORD] ĐÃ GỌI HÀM LƯU")
+        print(f"[SAVE_RECORD] current_id hiện tại = '{current_id}' (type: {type(current_id).__name__})")
+        print(f"[SAVE_RECORD] is_edit = {bool(current_id and current_id.isdigit())}")
+        print("="*60)
+
+        is_edit = bool(current_id and current_id.isdigit())
+        data = self.view.get_data()
+        missing = [f for f in self.view.required_fields if not data.get(f, "").strip()]
+        if missing:
+            self.view.show_message("Thiếu dữ liệu", 
+                "Vui lòng nhập đầy đủ các trường bắt buộc:\n→ " + "\n→ ".join(missing), "warning")
             return
-        data = res
 
         ketqua = self.view.get_result()
-        noidung_val = "Đã đạt" if ketqua == "Thi đạt" else data["Nội dung sát hạch"]
-        ghi_chu = data.get("Ghi chú", "")
         trang_thai_thi = self.view.get_thi_status()
+        ghi_chu = data.get("Ghi chú", "") or ""
 
-        ngay_nop_sql = datetime.strptime(data["Ngày nộp hồ sơ"], "%d/%m/%Y").strftime("%Y-%m-%d")
-        ngay_sh_sql = None
-        if data.get("Ngày SH"):
-            try:
-                ngay_sh_sql = datetime.strptime(data["Ngày SH"], "%d/%m/%Y").strftime("%Y-%m-%d")
-            except: pass
+        # Kiểm tra CCCD trước
+        if not self.view.validate_cccd_input():
+            return
 
         try:
-            if not self.view.get_current_id():
-                insert_data(
-                    ngay_nop_sql,
-                    data["Họ tên người nộp"],
-                    data["Ngày sinh"],
-                    data["CCCD"],
-                    data["Hạng đào tạo"],
-                    data["Hạng SH"],
-                    data["CSĐT"],
-                    data["Tiếp nhận phần mềm"],
-                    ngay_sh_sql,
-                    data["Trung tâm sát hạch"],
-                    noidung_val,
-                    ghi_chu,
-                    ketqua,
-                    trang_thai_thi
-                )
-                messagebox.showinfo("Thành công", "Đã thêm hồ sơ mới!")
-            else:
-                update_record(
-                    self.view.get_current_id(),
-                    ngay_nop_sql,
-                    data["Họ tên người nộp"],
-                    data["Ngày sinh"],
-                    data["CCCD"],
-                    data["Hạng đào tạo"],
-                    data["Hạng SH"],
-                    data["CSĐT"],
-                    data["Tiếp nhận phần mềm"],
-                    ngay_sh_sql,
-                    data["Trung tâm sát hạch"],
-                    noidung_val,
-                    ghi_chu,
-                    ketqua,
-                    trang_thai_thi
-                )
-                messagebox.showinfo("Cập nhật", "Đã cập nhật hồ sơ thành công!")
-        except Exception as e:
-            messagebox.showerror("Lỗi CSDL", f"Lưu thất bại: {e}")
+            ngay_nop = datetime.strptime(data["Ngày nộp hồ sơ"], "%d/%m/%Y").strftime("%Y-%m-%d")
+            ngay_sh = None
+            if data.get("Ngày SH"):
+                ngay_sh = datetime.strptime(data["Ngày SH"], "%d/%m/%Y").strftime("%Y-%m-%d")
+        except:
+            messagebox.showerror("Lỗi", "Định dạng ngày không đúng (dd/mm/yyyy)!")
+            return
 
-        self.view.clear_form()
-        self.show_data()
+        try:
+            if is_edit:
+                update_record(
+                    int(current_id), ngay_nop, data["Họ tên người nộp"], data["Ngày sinh"],
+                    data["CCCD"], data["Hạng đào tạo"], data["Hạng SH"], data["CSĐT"],
+                    data["Tiếp nhận phần mềm"], ngay_sh, data["Trung tâm sát hạch"],
+                    data["Nội dung sát hạch"], ghi_chu, ketqua, trang_thai_thi
+                )
+                messagebox.showinfo("Thành công", "Đã cập nhật hồ sơ thành công!")
+            else:
+                insert_data(
+                    ngay_nop, data["Họ tên người nộp"], data["Ngày sinh"],
+                    data["CCCD"], data["Hạng đào tạo"], data["Hạng SH"], data["CSĐT"],
+                    data["Tiếp nhận phần mềm"], ngay_sh, data["Trung tâm sát hạch"],
+                    data["Nội dung sát hạch"], ghi_chu, ketqua, trang_thai_thi
+                )
+                messagebox.showinfo("Thành công", "Đã thêm hồ sơ mới thành công!")
+
+            self.view.clear_form()
+            self.show_data()
+
+        except Exception as e:
+            messagebox.showerror("Lỗi CSDL", f"Không thể lưu:\n{e}")
 
     def edit_record(self, item_iid):
         # item_iid bây giờ chính là id thật dưới dạng chuỗi
@@ -241,3 +235,96 @@ class AppController:
         self.view.update_tree(formatted_rows)
         self.update_summary(all_rows)
         self.update_stats(all_rows)
+
+    def safe_set_date(self, entry, db_date_str):
+        """
+        Xử lý cả 2 định dạng: yyyy-mm-dd và dd/mm/yyyy
+        """
+        try:
+            if not db_date_str:
+                entry.set_date(date.today())
+                return
+                
+            # Thử định dạng 1: yyyy-mm-dd (định dạng database)
+            try:
+                dt = datetime.strptime(db_date_str, "%Y-%m-%d").date()
+                entry.set_date(dt)
+                return
+            except:
+                pass
+                
+            # Thử định dạng 2: dd/mm/yyyy (định dạng hiển thị)
+            try:
+                dt = datetime.strptime(db_date_str, "%d/%m/%Y").date()
+                entry.set_date(dt)
+                return
+            except:
+                pass
+                
+            # Nếu cả 2 đều lỗi, set về hôm nay
+            entry.set_date(date.today())
+            
+        except Exception as e:
+            print(f"Lỗi khi set date: {e}")
+            entry.set_date(date.today())
+
+    def load_for_edit(self, item_iid, message=False, text_add=False, addNew=False):
+        print(f"item_iid = {item_iid}, message={message}, text_add={text_add}, addNew={addNew}")
+        """Tải dữ liệu vào form để sửa"""
+        try:
+            record_id = int(item_iid)
+            print(f"[LOAD_FOR_EDIT] → Đang tải dữ liệu cho ID = {record_id}")  # ← THÊM DÒNG NÀY
+        except:
+            print("[LOAD_FOR_EDIT] → Lỗi: item_iid không phải số!", item_iid)
+            return
+
+        self.view.clear_form()
+        from models.db import get_connection
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM hoc_vien WHERE id = ? AND deleted = 0", (record_id,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            messagebox.showerror("Lỗi", "Không tìm thấy hồ sơ!")
+            return
+
+        r = dict(row)
+        self.view.set_current_id(record_id)
+        print("Data")
+        print(r)
+        print(f"[LOAD_FOR_EDIT] → Đã set current_id = {record_id}")  # ← VÀ DÒNG NÀY
+        if addNew == True:
+            self.view.set_current_id("")
+
+        # Điền dữ liệu
+        self.view.entries["Họ tên người nộp"].insert(0, r["ho_ten"])
+        self.view.entries["CCCD"].insert(0, r["cccd"])
+        self.view.entries["CSĐT"].insert(0, r.get("csdt", ""))
+        self.view.entries["Tiếp nhận phần mềm"].insert(0, r.get("tiep_nhan", ""))
+        self.view.entries["Trung tâm sát hạch"].insert(0, r.get("trung_tam", ""))
+        self.view.entries["Ghi chú"].insert(0, r.get("ghi_chu", ""))
+
+        self.safe_set_date(self.view.entries["Ngày sinh"], r.get("ngay_sinh"))
+        self.safe_set_date(self.view.entries["Ngày nộp hồ sơ"], r.get("ngay_nop_hoso"))
+        self.safe_set_date(self.view.entries["Ngày SH"], r.get("ngay_sh"))
+
+        self.view.entries["Hạng đào tạo"].set(r["hang_dao_tao"])
+        self.view.entries["Hạng SH"].set(r["hang_sh"])
+        self.view.entries["Nội dung sát hạch"].set(r["noi_dung"])
+        self.view.result_var.set(r["ket_qua"])
+        self.view.thi_var.set(r["trang_thai_thi"])
+
+        # try:
+        #     if r["ngay_sinh"]: self.view.entries["Ngày sinh"].set_date(r["ngay_sinh"])
+        #     if r["ngay_nop_hoso"]: self.view.entries["Ngày nộp hồ sơ"].set_date(r["ngay_nop_hoso"])
+        #     if r["ngay_sh"]: self.view.entries["Ngày SH"].set_date(r["ngay_sh"])
+        #     print("Đã vào đây")
+        # except: pass
+
+        if message == True:
+            messagebox.showinfo("Sẵn sàng sửa", "Đã tải dữ liệu!\nSửa xong → nhấn 'Lưu hồ sơ' để cập nhật.")
+        
+        if text_add == True:
+            messagebox.showinfo("Sẵn sàng thêm mới", "Đã tải dữ liệu!\nSửa xong → nhấn 'Lưu hồ sơ' để thêm mới.")

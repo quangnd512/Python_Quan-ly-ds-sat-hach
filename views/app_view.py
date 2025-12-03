@@ -21,6 +21,7 @@ class AppView:
         self.trangthai_search_var = tk.StringVar(value="All")
         self.current_id = tk.StringVar()
 
+
         self._setup_options()
         self._create_main_layout()
         self._setup_bindings()
@@ -55,7 +56,10 @@ class AppView:
             "SH lại (M)", "SH lại (M+H)", "SH lại (M+Đ)", "SH lại (M+H+Đ)"
         ]
         self.required_fields = ["Họ tên người nộp", "Ngày sinh", "CCCD", "Hạng đào tạo", "Hạng SH", "Nội dung sát hạch"]
-        self.ketqua_options = ["Đạt", "Trượt M+H+Đ", "Trượt M+Đ", "Trượt H", "Trượt H+Đ", "Trượt Đ"]
+
+        self.ketqua_options = [
+            "Đạt", "Trượt M+H+Đ", "Trượt M+Đ", "Trượt H", "Trượt H+Đ", "Trượt Đ"
+        ]
 
     def _create_main_layout(self):
         # ================== KHUNG CHÍNH BAO QUANH 3 PHẦN TRÊN ==================
@@ -63,14 +67,14 @@ class AppView:
         main_container.pack(fill="both", expand=True, padx=15, pady=10)
 
         main_container.grid_columnconfigure(0, weight=2)   # Thống kê
-        main_container.grid_columnconfigure(1, weight=6)   # Form chính
-        main_container.grid_columnconfigure(2, weight=2)   # Tìm kiếm
+        main_container.grid_columnconfigure(1, weight=5)   # Form chính
+        main_container.grid_columnconfigure(2, weight=3)   # Tìm kiếm
         main_container.grid_rowconfigure(0, weight=1)
 
         # ================== 1. THỐNG KÊ (BÊN TRÁI) ==================
         left_panel = tk.LabelFrame(main_container, text=" Thống kê & Tổng hợp ", font=("Arial", 12, "bold"),
                                    bg="white", fg="#2c3e50", relief="groove", bd=3)
-        left_panel.grid(row=0, column=0, sticky="nswe", padx=(0, 10))
+        left_panel.grid(row=0, column=0, sticky="nswe", padx=(0, 10), pady=0)
 
         self.summary_frame = tk.Frame(left_panel, bg="white")
         self.summary_frame.pack(fill="x", padx=15, pady=15)
@@ -155,10 +159,10 @@ class AppView:
         self.btn_save.pack(side="left", padx=5)
         self.btn_edit = ttk.Button(btn_left, text="Sửa hồ sơ", width=16)
         self.btn_edit.pack(side="left", padx=5)
-        self.btn_del_soft = ttk.Button(btn_left, text="Xóa hồ sơ", width=16)
+        self.btn_del_soft = ttk.Button(btn_left, text="Xóa hồ sơ", width=16, command=self.delete_record_ui)
         self.btn_del_soft.pack(side="left", padx=5)
-        self.btn_duplicate = ttk.Button(btn_left, text="Thêm mới từ hồ sơ cũ", width=26)
-        self.btn_duplicate.pack(side="left", padx=15)
+        # self.btn_duplicate = ttk.Button(btn_left, text="Thêm mới từ hồ sơ cũ", width=26)
+        # self.btn_duplicate.pack(side="left", padx=15)
         ttk.Button(btn_left, text="Hủy nhập", command=self.clear_form, width=14).pack(side="left", padx=5)
 
         btn_right = tk.Frame(button_container, bg="#3498db")
@@ -175,18 +179,17 @@ class AppView:
                                     bg="white", fg="#2c3e50", bd=4, padx=10, pady=10)
         table_frame.pack(fill="both", expand=True, padx=15, pady=(0,15))
 
-        cols = ["ID", "Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
+        cols = ["Họ tên", "Ngày sinh", "CCCD", "Hạng ĐT", "CSĐT", "Ngày nộp",
                 "Hạng SH", "Tiếp nhận", "Ngày SH", "Trung tâm", "Nội dung",
                 "Kết quả", "Ghi chú", "Trạng thái thi"]
 
         self.tree = ttk.Treeview(table_frame, columns=cols, show="headings")
-        self.tree.column("ID", width=0, stretch=False)
-        self.tree["displaycolumns"] = cols[1:]
 
-        for col in cols[1:]:
-            self.tree.heading(col, text=col)
+        # Không cần cột ID trong columns nữa → sạch sẽ hơn
+        for col in cols:
             w = 180 if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else 120
             a = "w" if col in ["Họ tên", "CCCD", "Trung tâm", "Nội dung", "Ghi chú"] else "center"
+            self.tree.heading(col, text=col)
             self.tree.column(col, width=w, anchor=a)
 
         scroll_y = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
@@ -214,32 +217,32 @@ class AppView:
         self.trangthai_search_var.set("All")
         self.controller.show_data()
 
-    def duplicate_record(self):
-        sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ trong bảng để copy!")
-            return
-        values = self.tree.item(sel[0], "values")
-        self.clear_form()
-        try:
-            self.entries["Họ tên người nộp"].insert(0, values[1])
-            self.entries["Ngày sinh"].set_date(datetime.strptime(values[2], "%d/%m/%Y"))
-            self.entries["CCCD"].insert(0, values[3])
-            self.entries["Hạng đào tạo"].set(values[4])
-            self.entries["CSĐT"].insert(0, values[5])
-            self.entries["Ngày nộp hồ sơ"].set_date(datetime.strptime(values[6], "%d/%m/%Y"))
-            self.entries["Hạng SH"].set(values[7])
-            self.entries["Tiếp nhận phần mềm"].insert(0, values[8])
-            self.entries["Ngày SH"].set_date(datetime.strptime(values[9], "%d/%m/%Y"))
-            self.entries["Trung tâm sát hạch"].insert(0, values[10])
-            self.entries["Nội dung sát hạch"].set(values[11])
-            self.result_var.set(values[12])
-            self.entries["Ghi chú"].insert(0, values[13])
-            self.thi_var.set(values[14])
-            self.current_id.set("")
-            messagebox.showinfo("THÀNH CÔNG!", "Đã copy dữ liệu cũ!\nChỉ cần sửa ngày → nhấn Lưu là xong!")
-        except Exception as e:
-            messagebox.showerror("Lỗi", str(e))
+    # def duplicate_record(self):
+    #     sel = self.tree.selection()
+    #     if not sel:
+    #         messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ trong bảng để copy!")
+    #         return
+    #     values = self.tree.item(sel[0], "values")
+    #     self.clear_form()
+    #     try:
+    #         self.entries["Họ tên người nộp"].insert(0, values[1])
+    #         self.entries["Ngày sinh"].set_date(datetime.strptime(values[2], "%d/%m/%Y"))
+    #         self.entries["CCCD"].insert(0, values[3])
+    #         self.entries["Hạng đào tạo"].set(values[4])
+    #         self.entries["CSĐT"].insert(0, values[5])
+    #         self.entries["Ngày nộp hồ sơ"].set_date(datetime.strptime(values[6], "%d/%m/%Y"))
+    #         self.entries["Hạng SH"].set(values[7])
+    #         self.entries["Tiếp nhận phần mềm"].insert(0, values[8])
+    #         self.entries["Ngày SH"].set_date(datetime.strptime(values[9], "%d/%m/%Y"))
+    #         self.entries["Trung tâm sát hạch"].insert(0, values[10])
+    #         self.entries["Nội dung sát hạch"].set(values[11])
+    #         self.result_var.set(values[12])
+    #         self.entries["Ghi chú"].insert(0, values[13])
+    #         self.thi_var.set(values[14])
+    #         self.current_id.set("")
+    #         messagebox.showinfo("THÀNH CÔNG!", "Đã copy dữ liệu cũ!\nChỉ cần sửa ngày → nhấn Lưu là xong!")
+    #     except Exception as e:
+    #         messagebox.showerror("Lỗi", str(e))
 
     def set_controller(self, controller):
         self.controller = controller
@@ -247,9 +250,9 @@ class AppView:
 
     def setup_controller_commands(self):
         self.btn_save.config(command=self.controller.save_record)
-        self.btn_edit.config(command=lambda: self.edit_record())
-        self.btn_del_soft.config(command=lambda: self.delete_record_ui())
-        self.btn_duplicate.config(command=self.duplicate_record)
+        self.btn_edit.config(command=lambda: self.edit_selected_record(message=True, text_add=False, addNew=False))
+        self.btn_del_soft.config(command=self.delete_selected_record)
+        # self.btn_duplicate.config(command=lambda: self.edit_selected_record(message=False, text_add=True, addNew=True))
         self.btn_template.config(command=self.controller.export_template)
         self.btn_import.config(command=self.controller.import_from_excel)
         self.btn_export.config(command=self.controller.export_to_excel)
@@ -260,7 +263,8 @@ class AppView:
         self.search_var.trace("w", lambda *_: self.trigger_search())
         self.noidung_search_var.trace("w", lambda *_: self.trigger_search())
         self.trangthai_search_var.trace("w", lambda *_: self.trigger_search())
-        self.tree.bind("<Double-1>", self.edit_record)
+        # self.tree.bind("<Double-1>", self.edit_record)
+        self.tree.bind("<Double-1>", lambda e: self.edit_selected_record(message=False, text_add=False, addNew=True))
         self.root.bind("<Control-s>", lambda e: self.controller.save_record())
         self.root.bind("<Escape>", lambda e: self.clear_form())
 
@@ -281,6 +285,43 @@ class AppView:
         {"info": messagebox.showinfo, "warning": messagebox.showwarning,
          "error": messagebox.showerror, "askyesno": messagebox.askyesno}[type](title, message)
 
+    # def clear_form(self, event=None):
+    #     self.current_id.set("")
+        
+    #     for label, entry in self.entries.items():
+    #         if isinstance(entry, DateEntry):
+    #             try:
+    #                 # Xử lý đặc biệt cho DateEntry
+    #                 if label == "Ngày nộp hồ sơ":
+    #                     # Đặt về ngày hôm nay
+    #                     entry.set_date(date.today())
+    #                 elif label == "Ngày sinh":
+    #                     # Để trống hoặc đặt về ngày mặc định
+    #                     entry._set_text("")  # Xóa text hiển thị
+    #                     entry._date = None   # Reset date object
+    #                 elif label == "Ngày SH":
+    #                     entry._set_text("")  # Xóa text hiển thị
+    #                     entry._date = None   # Reset date object
+    #             except Exception as e:
+    #                 print(f"Lỗi khi clear DateEntry {label}: {e}")
+    #                 # Fallback: đặt về 1/1/2000
+    #                 try:
+    #                     entry.set_date(date(2000, 1, 1))
+    #                     entry._set_text("")
+    #                 except:
+    #                     pass
+    #         elif isinstance(entry, ttk.Combobox):
+    #             if entry["values"]:
+    #                 entry.set(entry["values"][0])
+    #             else:
+    #                 entry.set("")
+    #         else:
+    #             entry.delete(0, tk.END)
+        
+    #     self.result_var.set("Đạt")
+    #     self.thi_var.set("Phục hồi")
+    #     self.root.after(100, self.update_nam_sinh_from_ngay_nop)
+
     def clear_form(self, event=None):
         self.current_id.set("")
         for entry in self.entries.values():
@@ -296,24 +337,39 @@ class AppView:
 
     def edit_record(self, *args):
         sel = self.tree.selection()
-        if not sel:
-            return
-        item = sel[0]                     # ← lấy phần tử đầu tiên của tuple
-        self.controller.edit_record(item)   # ← truyền thẳng iid (là id thật)
+        if sel: self.controller.edit_record(sel[0])
 
     def delete_record_ui(self):
         sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ để xóa!")
-            return
-        item = sel[0]                     # ← lấy iid thật
-        self.controller.delete_record_ui(item)
+        if sel: self.controller.delete_record_ui(sel[0])
+
+    # def update_tree(self, rows):
+    #     for i in self.tree.get_children(): self.tree.delete(i)
+    #     for r in rows: self.tree.insert("", "end", values=r)
 
     def update_tree(self, rows):
         for i in self.tree.get_children():
             self.tree.delete(i)
         for r in rows:
-            self.tree.insert("", "end", iid=str(r[0]), values=r[1:])
+            record_id = str(r[0])
+            self.tree.insert("", "end", iid=record_id, values=r[1:])
+
+    def edit_selected_record(self, message, text_add, addNew):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ trong bảng!")
+            return
+        item_iid = sel[0]  # Đây chính là ID thật
+        print(f"[CLICK ĐÚP] → iid được chọn = '{item_iid}' → chuẩn bị sửa ID này")  # ← THÊM DÒNG NÀY
+        self.controller.load_for_edit(item_iid, message, text_add, addNew)
+
+    def delete_selected_record(self):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn 1 hồ sơ để xóa!")
+            return
+        item_iid = sel[0]
+        self.controller.delete_record_ui(item_iid)
 
     def update_summary(self, data):
         for w in self.summary_frame.winfo_children(): w.destroy()
@@ -325,11 +381,41 @@ class AppView:
             tk.Label(frame, text=f"{hang}: {count}", font=("Arial", 10, "bold"), bg="#ecf0f1", padx=15, pady=8, relief="solid").grid(row=0, column=col, padx=5)
             col += 1
 
+    # Trong AppView, thêm phương thức:
+    def validate_cccd_input(self):
+        """Kiểm tra CCCD khi người dùng nhập xong"""
+        cccd = self.entries["CCCD"].get().strip()
+        cccd_clean = cccd.replace('.', '').replace(' ', '')
+        
+        if not cccd_clean:
+            messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập CCCD!")
+            self.entries["CCCD"].focus_set()
+            return False
+        
+        if not cccd_clean.isdigit():
+            messagebox.showwarning("CCCD không hợp lệ", 
+                "CCCD chỉ được chứa số (0-9)!\nVí dụ: 001234567890")
+            self.entries["CCCD"].focus_set()
+            return False
+        
+        if len(cccd_clean) != 12:
+            messagebox.showwarning("CCCD không đúng độ dài", 
+                f"CCCD phải có đúng 12 số!\nHiện tại: {len(cccd_clean)} số\nVí dụ: 001234567890")
+            self.entries["CCCD"].focus_set()
+            return False
+        
+        # Tự động format hiển thị
+        if '.' not in cccd and len(cccd_clean) == 12:
+            formatted = f"{cccd_clean[:4]}.{cccd_clean[4:8]}.{cccd_clean[8:]}"
+            self.entries["CCCD"].delete(0, tk.END)
+            self.entries["CCCD"].insert(0, formatted)
+        
+        return True
+
     def update_stats(self, data):
         # Xóa hết nội dung cũ
         for w in self.stats_frame.winfo_children():
             w.destroy()
-
         # Danh sách thống kê
         stats = [
             ("TỔNG HỒ SƠ", data['total'], "#34495e"),
@@ -337,13 +423,11 @@ class AppView:
             ("TRƯỢT", data['truot'], "#e74c3c"),
             ("TỶ LỆ ĐẠT", f"{data['ty_le']:.1f}%", "#3498db")
         ]
-
         # Hiển thị theo chiều dọc (mỗi dòng 1 label đẹp)
         for i, (label_text, value, color) in enumerate(stats):
             # Frame bao mỗi dòng để dễ căn chỉnh
             row_frame = tk.Frame(self.stats_frame, bg="white")
             row_frame.pack(fill="x", padx=10, pady=6)
-
             # Nhãn tiêu đề (Tổng, Đạt, Trượt...)
             tk.Label(
                 row_frame,
@@ -354,7 +438,6 @@ class AppView:
                 width=15,
                 anchor="w"
             ).pack(side="left")
-
             # Giá trị (số liệu lớn, đậm, nổi bật)
             tk.Label(
                 row_frame,
@@ -367,6 +450,5 @@ class AppView:
                 relief="raised",
                 bd=2
             ).pack(side="right")
-
     def run(self):
         self.root.mainloop()
